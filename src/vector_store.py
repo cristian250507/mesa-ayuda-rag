@@ -1,8 +1,9 @@
-"""Módulo 3 y 4: Embeddings, indexación vectorial y recuperación.
+"""Módulos 3 y 4: Embeddings, indexación vectorial y recuperación.
 
-Se utiliza FAISS como base de datos vectorial local. Frente a una búsqueda por
-palabras clave, la búsqueda vectorial permite resolver consultas donde no hay
-coincidencia léxica con la norma pero sí equivalencia semántica.
+Se utiliza FAISS como base de datos vectorial local y Ollama para generar
+embeddings sin depender de una API externa de pago.
+
+Asignatura: ISY0101 - Ingeniería de Soluciones con IA
 """
 
 from __future__ import annotations
@@ -12,19 +13,29 @@ from typing import List, Tuple
 
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
-from langchain_openai import OpenAIEmbeddings
+from langchain_ollama import OllamaEmbeddings
 
-from config.settings import CONFIG_MODELO, CONFIG_RAG, DIR_INDICE
+from config.settings import CONFIG_RAG, DIR_INDICE
 
 logger = logging.getLogger(__name__)
 
+# --------------------------------------------------------------------------- #
+# Configuración Ollama
+# --------------------------------------------------------------------------- #
 
-def obtener_embeddings() -> OpenAIEmbeddings:
-    """Construye el cliente de embeddings apuntando a GitHub Models."""
-    return OpenAIEmbeddings(
-        model=CONFIG_MODELO.modelo_embeddings,
-        base_url=CONFIG_MODELO.base_url,
-        api_key=CONFIG_MODELO.api_key,
+MODELO_EMBEDDINGS = "nomic-embed-text"
+OLLAMA_BASE_URL = "http://localhost:11434"
+
+
+def obtener_embeddings() -> OllamaEmbeddings:
+    """Construye el cliente de embeddings local de Ollama.
+
+    Returns:
+        Cliente de embeddings configurado con nomic-embed-text.
+    """
+    return OllamaEmbeddings(
+        model=MODELO_EMBEDDINGS,
+        base_url=OLLAMA_BASE_URL,
     )
 
 
@@ -39,19 +50,38 @@ def construir_indice(chunks: List[Document]) -> FAISS:
 
     Raises:
         ValueError: si la lista de chunks viene vacía.
-        RuntimeError: si falla la llamada al servicio de embeddings.
+        RuntimeError: si falla Ollama o la construcción del índice.
     """
     if not chunks:
-        raise ValueError("No se puede construir el índice: no hay chunks.")
+        raise ValueError(
+            "No se puede construir el índice: no hay chunks."
+        )
 
     try:
-        indice = FAISS.from_documents(chunks, obtener_embeddings())
-        DIR_INDICE.mkdir(parents=True, exist_ok=True)
-        indice.save_local(str(DIR_INDICE))
-    except Exception as exc:  # noqa: BLE001
-        raise RuntimeError(f"Error al construir el índice vectorial: {exc}") from exc
+        indice = FAISS.from_documents(
+            chunks,
+            obtener_embeddings(),
+        )
 
-    logger.info("Índice FAISS construido y guardado en '%s'.", DIR_INDICE)
+        DIR_INDICE.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        indice.save_local(
+            str(DIR_INDICE),
+        )
+
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(
+            f"Error al construir el índice vectorial: {exc}"
+        ) from exc
+
+    logger.info(
+        "Índice FAISS construido y guardado en '%s'.",
+        DIR_INDICE,
+    )
+
     return indice
 
 
@@ -66,7 +96,8 @@ def cargar_indice() -> FAISS:
     """
     if not DIR_INDICE.exists():
         raise FileNotFoundError(
-            "El índice no existe. Ejecuta primero 'python -m src.main --indexar'."
+            "El índice no existe. Ejecuta primero "
+            "'python -m src.main --indexar'."
         )
 
     return FAISS.load_local(
@@ -76,12 +107,15 @@ def cargar_indice() -> FAISS:
     )
 
 
-def recuperar(indice: FAISS, consulta: str) -> List[Tuple[Document, float]]:
+def recuperar(
+    indice: FAISS,
+    consulta: str,
+) -> List[Tuple[Document, float]]:
     """Recupera los chunks más similares aplicando umbral de similitud.
 
     Se calculan los puntajes ANTES de inyectar el contexto en el prompt. Si
     ningún fragmento supera el umbral, se devuelve lista vacía y el pipeline
-    evita invocar al generador: es la principal barrera anti-alucinación.
+    evita invocar al generador.
 
     Args:
         indice: Índice FAISS cargado.
@@ -91,9 +125,16 @@ def recuperar(indice: FAISS, consulta: str) -> List[Tuple[Document, float]]:
         Lista de tuplas (documento, distancia) que pasaron el filtro.
     """
     try:
-        resultados = indice.similarity_search_with_score(consulta, k=CONFIG_RAG.top_k)
+        resultados = indice.similarity_search_with_score(
+            consulta,
+            k=CONFIG_RAG.top_k,
+        )
+
     except Exception as exc:  # noqa: BLE001
-        logger.error("Fallo en la búsqueda vectorial: %s", exc)
+        logger.error(
+            "Fallo en la búsqueda vectorial: %s",
+            exc,
+        )
         return []
 
     filtrados = [
@@ -108,10 +149,13 @@ def recuperar(indice: FAISS, consulta: str) -> List[Tuple[Document, float]]:
         len(filtrados),
         CONFIG_RAG.umbral_distancia,
     )
+
     return filtrados
 
 
-def formatear_contexto(resultados: List[Tuple[Document, float]]) -> str:
+def formatear_contexto(
+    resultados: List[Tuple[Document, float]],
+) -> str:
     """Ensambla el bloque CONTEXTO con metadatos explícitos de trazabilidad.
 
     Args:
@@ -124,12 +168,16 @@ def formatear_contexto(resultados: List[Tuple[Document, float]]) -> str:
 
     for doc, score in resultados:
         meta = doc.metadata
+
         encabezado = (
             f"[FUENTE: {meta.get('documento', 'desconocido')} "
             f"| TIPO: {meta.get('tipo', 'interno')} "
             f"| PÁGINA: {meta.get('pagina', 's/n')} "
             f"| SIMILITUD: {1 / (1 + score):.2f}]"
         )
-        bloques.append(f"{encabezado}\n{doc.page_content.strip()}")
+
+        bloques.append(
+            f"{encabezado}\n{doc.page_content.strip()}"
+        )
 
     return "\n\n---\n\n".join(bloques)

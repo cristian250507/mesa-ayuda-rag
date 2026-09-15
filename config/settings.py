@@ -3,81 +3,123 @@
 Centraliza parámetros de conexión, chunking, recuperación y generación para
 evitar valores mágicos dispersos en el código (trazabilidad y mantenibilidad).
 
+El sistema utiliza Ollama de forma local, por lo que no requiere una API
+externa ni una clave de OpenAI.
+
 Asignatura: ISY0101 - Ingeniería de Soluciones con IA
 """
 
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
+
+from dotenv import load_dotenv
+
 
 # --------------------------------------------------------------------------- #
 # Rutas del proyecto
 # --------------------------------------------------------------------------- #
+
 RAIZ: Path = Path(__file__).resolve().parent.parent
+
 DIR_DATA: Path = RAIZ / "data"
 DIR_INTERNO: Path = DIR_DATA / "interno"
 DIR_EXTERNO: Path = DIR_DATA / "externo"
 DIR_INDICE: Path = RAIZ / "indice_faiss"
 
 
+# --------------------------------------------------------------------------- #
+# Variables de entorno
+# --------------------------------------------------------------------------- #
+
+load_dotenv(RAIZ / ".env")
+
+
+# --------------------------------------------------------------------------- #
+# Configuración de modelos
+# --------------------------------------------------------------------------- #
+
 @dataclass(frozen=True)
 class ConfigModelo:
-    """Parámetros de conexión y generación del LLM (GitHub Models)."""
+    """Parámetros de los modelos locales de Ollama."""
 
-    base_url: str = field(
-        default_factory=lambda: os.getenv(
-            "GITHUB_BASE_URL", "https://models.inference.ai.azure.com"
-        )
+    # Servidor local de Ollama.
+    ollama_base_url: str = os.getenv(
+        "OLLAMA_BASE_URL",
+        "http://localhost:11434",
     )
-    api_key: str = field(default_factory=lambda: os.getenv("GITHUB_TOKEN", ""))
-    modelo_chat: str = "gpt-4o-mini"
-    modelo_embeddings: str = "text-embedding-3-small"
 
-    # temperature baja => respuestas deterministas, menor tasa de alucinación
+    # Modelo utilizado para generar y reformular respuestas.
+    modelo_chat: str = os.getenv(
+        "OLLAMA_CHAT_MODEL",
+        "gemma3:4b",
+    )
+
+    # Modelo utilizado para generar embeddings.
+    modelo_embeddings: str = os.getenv(
+        "OLLAMA_EMBEDDING_MODEL",
+        "nomic-embed-text",
+    )
+
+    # Temperature baja => respuestas más deterministas.
     temperature: float = 0.1
-    max_tokens: int = 700
+
+    # Límite conceptual de generación.
+    max_tokens: int = 350
+
+    # Tiempo máximo de espera de conexión.
     timeout: int = 60
 
+
+# --------------------------------------------------------------------------- #
+# Configuración RAG
+# --------------------------------------------------------------------------- #
 
 @dataclass(frozen=True)
 class ConfigRAG:
     """Parámetros del pipeline de recuperación aumentada."""
 
-    # Chunking: equilibrio entre perder contexto (muy chico) y diluir
-    # el significado semántico (muy grande). Overlap evita cortar artículos.
+    # Chunking:
+    # equilibrio entre perder contexto (muy chico) y diluir
+    # el significado semántico (muy grande).
     chunk_size: int = 800
+
     chunk_overlap: int = 120
 
-    # Recuperación
+    # Número máximo de chunks recuperados.
     top_k: int = 4
-    # Umbral de distancia L2 de FAISS: a MENOR valor, mayor similitud.
-    # Si ningún chunk baja del umbral, no se invoca al generador.
+
+    # Umbral de distancia L2 de FAISS:
+    # a MENOR valor, mayor similitud.
+    #
+    # Si ningún chunk baja del umbral,
+    # no se invoca al generador.
     umbral_distancia: float = 1.15
 
+
+# --------------------------------------------------------------------------- #
+# Configuración de memoria
+# --------------------------------------------------------------------------- #
 
 @dataclass(frozen=True)
 class ConfigMemoria:
     """Parámetros de la memoria conversacional."""
 
-    ventana_turnos: int = 5          # ConversationBufferWindowMemory(k=5)
-    umbral_resumen: int = 10         # a partir de aquí se resume la sesión
+    # Cantidad de turnos recientes que se mantienen.
+    ventana_turnos: int = 5
 
+    # Cantidad de turnos antes de generar un resumen.
+    umbral_resumen: int = 10
+
+
+# --------------------------------------------------------------------------- #
+# Instancias globales de configuración
+# --------------------------------------------------------------------------- #
 
 CONFIG_MODELO = ConfigModelo()
+
 CONFIG_RAG = ConfigRAG()
+
 CONFIG_MEMORIA = ConfigMemoria()
-
-
-def validar_entorno() -> None:
-    """Verifica que las variables de entorno obligatorias estén definidas.
-
-    Raises:
-        EnvironmentError: si falta GITHUB_TOKEN.
-    """
-    if not CONFIG_MODELO.api_key:
-        raise EnvironmentError(
-            "Falta la variable de entorno GITHUB_TOKEN. "
-            "Defínela antes de ejecutar (ver README.md)."
-        )

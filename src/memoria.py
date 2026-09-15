@@ -1,19 +1,15 @@
-"""Módulo 6: Gestión del contexto conversacional.
+"""Gestión de memoria conversacional del agente RAG.
 
-Estrategia híbrida:
-    * ConversationBufferWindowMemory(k=5) como memoria operativa, para mantener
-      el hilo reciente sin inflar el consumo de tokens en cada turno.
-    * ConversationSummaryMemory a partir de cierto número de turnos, para
-      sesiones largas de atención sin perder el contexto inicial.
+Mantiene los últimos turnos de la conversación y genera un resumen
+cuando se alcanza el número máximo de turnos configurado.
+
+Asignatura: ISY0101 - Ingeniería de Soluciones con IA
 """
 
 from __future__ import annotations
 
 import logging
-from typing import List
-
-from langchain.memory import ConversationBufferWindowMemory, ConversationSummaryMemory
-from langchain_openai import ChatOpenAI
+from typing import Any, List, Tuple
 
 from config.settings import CONFIG_MEMORIA
 
@@ -21,77 +17,134 @@ logger = logging.getLogger(__name__)
 
 
 class GestorMemoria:
-    """Administra el historial conversacional con conmutación automática."""
+    """Gestiona el historial conversacional del agente."""
 
-    def __init__(self, llm: ChatOpenAI) -> None:
-        """Inicializa el gestor.
+    def __init__(self, llm: Any) -> None:
+        """Inicializa el gestor de memoria.
 
         Args:
-            llm: Cliente de chat utilizado por la memoria de resumen.
+            llm: Modelo de lenguaje utilizado para generar resúmenes.
         """
         self._llm = llm
-        self._turnos: int = 0
 
-        self._ventana = ConversationBufferWindowMemory(
-            k=CONFIG_MEMORIA.ventana_turnos,
-            return_messages=False,
-            memory_key="historial",
-        )
-        self._resumen = ConversationSummaryMemory(
-            llm=llm,
-            return_messages=False,
-            memory_key="historial",
+        self._historial: List[Tuple[str, str]] = []
+
+        self._resumen: str = ""
+
+        logger.info(
+            "Gestor de memoria inicializado."
         )
 
-    @property
-    def modo(self) -> str:
-        """Devuelve el modo de memoria activo ('ventana' o 'resumen')."""
-        return "resumen" if self._turnos >= CONFIG_MEMORIA.umbral_resumen else "ventana"
-
-    def registrar(self, pregunta: str, respuesta: str) -> None:
-        """Guarda un turno completo en ambas memorias.
+    def registrar(
+        self,
+        pregunta: str,
+        respuesta: str,
+    ) -> None:
+        """Registra un intercambio de la conversación.
 
         Args:
-            pregunta: Consulta del estudiante.
+            pregunta: Pregunta realizada por el usuario.
             respuesta: Respuesta entregada por el agente.
         """
-        entrada = {"input": pregunta}
-        salida = {"output": respuesta}
+        self._historial.append(
+            (
+                pregunta.strip(),
+                respuesta.strip(),
+            )
+        )
+
+        # Mantener solamente la ventana configurada.
+        max_turnos = CONFIG_MEMORIA.ventana_turnos
+
+        if len(self._historial) > max_turnos:
+            self._historial = self._historial[-max_turnos:]
+
+        logger.info(
+            "Turno registrado. Historial actual: %d turnos.",
+            len(self._historial),
+        )
+
+        # Generar resumen cuando se alcanza el umbral.
+        if len(self._historial) >= CONFIG_MEMORIA.umbral_resumen:
+            self._generar_resumen()
+
+    def _generar_resumen(self) -> None:
+        """Genera un resumen de la conversación utilizando el LLM."""
+        if not self._historial:
+            return
+
+        conversaciones = "\n".join(
+            f"Usuario: {pregunta}\nAsistente: {respuesta}"
+            for pregunta, respuesta in self._historial
+        )
+
+        prompt = f"""
+Resume brevemente la siguiente conversación académica.
+
+Conserva solamente información útil para responder futuras preguntas:
+- temas consultados;
+- datos importantes;
+- contexto que pueda necesitarse posteriormente.
+
+No inventes información.
+
+CONVERSACIÓN:
+{conversaciones}
+
+RESUMEN:
+""".strip()
 
         try:
-            self._ventana.save_context(entrada, salida)
-            if self.modo == "resumen" or self._turnos >= CONFIG_MEMORIA.umbral_resumen - 1:
-                self._resumen.save_context(entrada, salida)
-        except Exception as exc:  # noqa: BLE001 - la memoria nunca debe cortar la atención
-            logger.warning("No se pudo guardar el turno en memoria: %s", exc)
+            resultado = self._llm.invoke(prompt)
 
-        self._turnos += 1
+            self._resumen = str(
+                resultado.content
+            ).strip()
+
+            logger.info(
+                "Resumen conversacional actualizado."
+            )
+
+        except Exception as exc:
+            logger.warning(
+                "No se pudo generar el resumen: %s",
+                exc,
+            )
 
     def obtener_historial(self) -> str:
-        """Devuelve el historial en el formato adecuado al modo activo.
+        """Devuelve el contexto disponible de la conversación.
 
         Returns:
-            Texto del historial, o un marcador si la sesión recién comienza.
+            Texto con resumen e historial reciente.
         """
-        try:
-            memoria = self._resumen if self.modo == "resumen" else self._ventana
-            historial = memoria.load_memory_variables({}).get("historial", "")
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("No se pudo recuperar el historial: %s", exc)
-            return "(sin historial disponible)"
+        partes: List[str] = []
 
-        return historial.strip() or "(inicio de la conversación)"
+        if self._resumen:
+            partes.append(
+                f"RESUMEN DE LA CONVERSACIÓN:\n{self._resumen}"
+            )
+
+        if self._historial:
+            conversaciones = "\n".join(
+                f"Usuario: {pregunta}\n"
+                f"Asistente: {respuesta}"
+                for pregunta, respuesta in self._historial
+            )
+
+            partes.append(
+                f"HISTORIAL RECIENTE:\n{conversaciones}"
+            )
+
+        if not partes:
+            return "(inicio de la conversación)"
+
+        return "\n\n".join(partes)
 
     def reiniciar(self) -> None:
-        """Limpia el historial para comenzar una nueva atención."""
-        self._ventana.clear()
-        self._resumen.clear()
-        self._turnos = 0
-        logger.info("Memoria conversacional reiniciada.")
+        """Reinicia completamente la memoria."""
+        self._historial.clear()
+        self._resumen = ""
 
-    def turnos(self) -> int:
-        """Número de turnos registrados en la sesión actual."""
-        return self._turnos
-
-
-__all__: List[str] = ["GestorMemoria"]
+        logger.info(
+            "Memoria conversacional reiniciada."
+        )
