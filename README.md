@@ -33,8 +33,6 @@ El sistema permite:
 
 ## 2. Arquitectura
 
-![Arquitectura de la solución](docs/arquitectura.svg)
-
 El pipeline sigue el ciclo:
 
 **Retrieve → Augment → Generate**
@@ -51,8 +49,8 @@ y se divide en tres fases principales:
 
 ```text
                     DOCUMENTOS
-                        │
-                        ▼
+                         │
+                         ▼
                   ┌───────────┐
                   │  Ingesta  │
                   └─────┬─────┘
@@ -97,35 +95,14 @@ y se divide en tres fases principales:
                   └──────┬──────┘
                          │
                          ▼
-                 ┌────────────────┐
-                 │ Ollama         │
-                 │ Gemma 3 4B     │
-                 └───────┬────────┘
-                         │
-                         ▼
+                ┌────────────────┐
+                │ Ollama         │
+                │ Gemma 3 4B     │
+                └───────┬────────┘
+                        │
+                        ▼
                     RESPUESTA
-```
-
----
-
-## 3. Fuentes de información
-
-El sistema utiliza dos tipos de fuentes documentales:
-
-| Tipo | Ubicación | Documentos |
-|---|---|---|
-| **Internas** | `data/interno/` | Reglamento Académico, Calendario Académico y FAQ de la Mesa de Ayuda |
-| **Externas** | `data/externo/` | Normativa de Beneficios Estudiantiles y Marco de Reconocimiento de Aprendizajes |
-
-Ambos tipos de documentos utilizan el mismo pipeline de procesamiento e indexación.
-
-Cada documento mantiene metadatos que permiten identificar su origen y distinguir entre información interna y externa.
-
----
-
-## 4. Estructura del repositorio
-
-```text
+3. Estructura del repositorio
 mesa-ayuda-rag/
 │
 ├── config/
@@ -134,11 +111,6 @@ mesa-ayuda-rag/
 ├── data/
 │   ├── interno/                 # Corpus institucional
 │   └── externo/                 # Corpus normativo externo
-│
-├── docs/
-│   ├── arquitectura.svg         # Diagrama de arquitectura
-│   ├── Informe_Tecnico.docx     # Informe técnico
-│   └── Guion_Defensa.md         # Guion de defensa
 │
 ├── evaluacion/
 │   └── conjunto_dorado.json     # Casos de evaluación
@@ -157,316 +129,211 @@ mesa-ayuda-rag/
 ├── .env.example                 # Ejemplo de configuración
 ├── requirements.txt             # Dependencias Python
 └── README.md
-```
-
----
-
-## 5. Tecnologías utilizadas
-
-### Lenguaje
-
-- Python 3.10 o superior.
-
-### Inteligencia artificial
-
-- **Ollama** — ejecución local de modelos de inteligencia artificial.
-- **Gemma 3 4B** — generación de respuestas.
-- **nomic-embed-text** — generación de embeddings.
-
-### RAG y búsqueda vectorial
-
-- **LangChain** — integración de los componentes del pipeline RAG.
-- **FAISS** — almacenamiento y búsqueda vectorial.
-- **Embeddings locales** — representación semántica de los documentos.
-
-### Procesamiento documental
-
-- `pypdf`
-- Python estándar.
-
-### Evaluación
-
-- Context Precision.
-- Context Recall.
-- Faithfulness.
-- Answer Relevancy.
-
----
-
-## 6. Requisitos previos
+4. Tecnologías utilizadas
+Lenguaje
+Python 3.10 o superior.
+Inteligencia artificial
+Ollama — ejecución local de modelos de inteligencia artificial.
+Gemma 3 4B — generación de respuestas.
+nomic-embed-text — generación de embeddings.
+RAG y búsqueda vectorial
+LangChain — integración de los componentes del pipeline RAG.
+FAISS — almacenamiento y búsqueda vectorial.
+Embeddings locales — representación semántica de los documentos.
+Procesamiento documental
+pypdf
+Python estándar.
+Evaluación
+Context Precision.
+Context Recall.
+Faithfulness.
+Answer Relevancy.
+5. Requisitos previos
 
 Antes de ejecutar el proyecto se necesita:
 
-- Python 3.10 o superior.
-- Ollama instalado.
-- Modelo `gemma3:4b`.
-- Modelo `nomic-embed-text`.
-- Dependencias Python del proyecto.
-
-### Verificar Ollama
+Python 3.10 o superior.
+Ollama instalado.
+Modelo gemma3:4b.
+Modelo nomic-embed-text.
+Dependencias Python del proyecto.
+Verificar Ollama
 
 Para comprobar que Ollama está instalado:
 
-```bash
 ollama --version
-```
 
 Los modelos requeridos pueden descargarse con:
 
-```bash
 ollama pull gemma3:4b
 ollama pull nomic-embed-text
-```
 
-En Windows, si `ollama` no está disponible directamente en el PATH, se puede utilizar su ejecutable instalado localmente:
+En Windows, si ollama no está disponible directamente en el PATH, se puede utilizar su ejecutable instalado localmente:
 
-```powershell
 & "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe" pull gemma3:4b
-```
-
-```powershell
 & "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe" pull nomic-embed-text
-```
 
 Para comprobar que el modelo de generación funciona:
 
-```powershell
 ollama run gemma3:4b
-```
-
----
-
-## 7. Instalación
-
-### Paso 1 — Clonar el repositorio
-
-```bash
-git clone https://github.com/<usuario>/mesa-ayuda-rag.git
-cd mesa-ayuda-rag
-```
-
-### Paso 2 — Crear el entorno virtual
-
-```bash
+6. Instalación
+Paso 1 — Clonar el repositorio
+git clone https://github.com/cristian250507/Mesa-ayuda-rag.git
+cd Mesa-ayuda-rag
+Paso 2 — Crear el entorno virtual
 python -m venv .venv
-```
-
-### Paso 3 — Activar el entorno virtual
-
-#### Windows PowerShell
-
-```powershell
+Paso 3 — Activar el entorno virtual
+Windows PowerShell
 .venv\Scripts\Activate.ps1
-```
-
-#### Linux / macOS
-
-```bash
+Linux / macOS
 source .venv/bin/activate
-```
-
-### Paso 4 — Instalar las dependencias
-
-```bash
+Paso 4 — Instalar las dependencias
 pip install -r requirements.txt
-```
+7. Configuración
 
----
+El proyecto utiliza un archivo .env para definir la configuración de Ollama.
 
-## 8. Configuración
-
-El proyecto utiliza un archivo `.env` para definir la configuración de Ollama.
-
-Crear un archivo `.env` en la raíz del proyecto:
-
-```env
-# ============================================================
-# Ollama - ejecución local
-# ============================================================
+Crear un archivo .env en la raíz del proyecto:
 
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_CHAT_MODEL=gemma3:4b
 OLLAMA_EMBEDDING_MODEL=nomic-embed-text
-```
 
-También se incluye `.env.example` como referencia.
+También se incluye .env.example como referencia.
 
-El archivo `.env` está destinado a la configuración local y no debe subirse al repositorio.
+El archivo .env está destinado a la configuración local y no debe subirse al repositorio.
 
 No se requieren claves de API de OpenAI ni de GitHub para ejecutar el sistema.
 
----
-
-## 9. Ejecución
-
-### Paso 1 — Construir el índice vectorial
+8. Ejecución
+Paso 1 — Construir el índice vectorial
 
 La primera vez que se ejecuta el proyecto es necesario procesar los documentos:
 
-```bash
 python -m src.main --indexar
-```
 
 Este proceso:
 
-1. Carga los documentos desde `data/`.
-2. Divide los documentos en chunks.
-3. Genera embeddings mediante `nomic-embed-text`.
-4. Construye el índice FAISS.
-5. Guarda el índice en `indice_faiss/`.
+Carga los documentos desde data/.
+Divide los documentos en chunks.
+Genera embeddings mediante nomic-embed-text.
+Construye el índice FAISS.
+Guarda el índice en indice_faiss/.
 
 La indexación debe repetirse cuando se agreguen, eliminen o modifiquen documentos del corpus.
 
----
-
-### Paso 2 — Iniciar la atención conversacional
-
-```bash
+Paso 2 — Iniciar la atención conversacional
 python -m src.main --chat
-```
 
 El sistema permite realizar consultas directamente desde la consola.
 
 Comandos disponibles:
 
-```text
 reiniciar
-```
 
 Reinicia el contexto de la conversación.
 
-```text
 salir
-```
 
 Finaliza la aplicación.
 
----
-
-### Paso 3 — Evaluar el sistema
-
-```bash
+Paso 3 — Evaluar el sistema
 python -m src.main --evaluar
-```
 
 Este comando ejecuta los casos definidos en:
 
-```text
 evaluacion/conjunto_dorado.json
-```
 
 y calcula métricas relacionadas con:
 
-- **Context Precision**
-- **Context Recall**
-- **Faithfulness**
-- **Answer Relevancy**
-
----
-
-## 10. Ejemplo de uso
-
-```text
+Context Precision
+Context Recall
+Faithfulness
+Answer Relevancy
+9. Ejemplo de uso
 Estudiante > Reprobé dos veces Cálculo, ¿qué me pasa?
 
 Asistente > Reprobar por segunda vez consecutiva una misma asignatura
 constituye una causal de eliminación académica según el Reglamento Académico.
 
 Fuentes: Reglamento_Academico (interno)
+
 Confianza: alto | Chunks usados: 3
-```
 
 Luego el estudiante puede realizar una pregunta relacionada:
 
-```text
 Estudiante > ¿Y eso afecta mi beca?
-```
 
 El sistema utiliza el contexto de la conversación para interpretar que "eso" hace referencia a la situación académica mencionada anteriormente.
 
 La consulta se reformula internamente antes de realizar la búsqueda vectorial, permitiendo recuperar información relacionada con beneficios estudiantiles.
 
-```text
 Asistente > Según la normativa recuperada, la situación puede afectar la
 mantención del beneficio. Se recomienda revisar las condiciones específicas
 del beneficio y, si corresponde, consultar con la Dirección de Asuntos
 Estudiantiles.
 
 Fuentes: Normativa_Beneficios_Estudiantiles (externo)
+
 Confianza: alto | Chunks usados: 2
-```
 
-Este ejemplo demuestra la **gestión de contexto conversacional**, ya que una pregunta dependiente del contexto anterior puede ser reformulada antes de realizar la recuperación de información.
+Este ejemplo demuestra la gestión de contexto conversacional, ya que una pregunta dependiente del contexto anterior puede ser reformulada antes de realizar la recuperación de información.
 
----
-
-## 11. Parámetros configurables
+10. Parámetros configurables
 
 Los principales parámetros se encuentran centralizados en:
 
-```text
 config/settings.py
-```
+Parámetro	Valor	Justificación
+chunk_size	800	Equilibrio entre conservar contexto y evitar chunks demasiado grandes.
+chunk_overlap	120	Permite mantener continuidad entre fragmentos.
+top_k	4	Recupera los documentos más relevantes sin saturar el contexto.
+umbral_distancia	1.15	Filtra resultados con baja similitud antes de generar una respuesta.
+temperature	0.1	Favorece respuestas más deterministas para información normativa.
+ventana_turnos	5	Mantiene los últimos turnos de la conversación.
+umbral_resumen	10	Define cuándo se intenta generar un resumen de la conversación.
+11. Componentes principales
+Ingesta y Chunking
 
-| Parámetro | Valor | Justificación |
-|---|---:|---|
-| `chunk_size` | 800 | Equilibrio entre conservar contexto y evitar chunks demasiado grandes. |
-| `chunk_overlap` | 120 | Permite mantener continuidad entre fragmentos. |
-| `top_k` | 4 | Recupera los documentos más relevantes sin saturar el contexto. |
-| `umbral_distancia` | 1.15 | Filtra resultados con baja similitud antes de generar una respuesta. |
-| `temperature` | 0.1 | Favorece respuestas más deterministas para información normativa. |
-| `ventana_turnos` | 5 | Mantiene los últimos turnos de la conversación. |
-| `umbral_resumen` | 10 | Define cuándo se intenta generar un resumen de la conversación. |
-
----
-
-## 12. Componentes principales
-
-### Ingesta y Chunking
-
-`src/ingesta.py`
+src/ingesta.py
 
 Carga los documentos del corpus y los divide en fragmentos de tamaño controlado para facilitar la búsqueda semántica.
 
-### Embeddings y FAISS
+Embeddings y FAISS
 
-`src/vector_store.py`
+src/vector_store.py
 
-Utiliza `nomic-embed-text` mediante Ollama para transformar los chunks en vectores y FAISS para realizar la recuperación de información relevante.
+Utiliza nomic-embed-text mediante Ollama para transformar los chunks en vectores y FAISS para realizar la recuperación de información relevante.
 
-### Memoria
+Memoria
 
-`src/memoria.py`
+src/memoria.py
 
 Mantiene el contexto de la conversación para permitir preguntas de seguimiento y reformulación de consultas.
 
-### Pipeline RAG
+Pipeline RAG
 
-`src/rag_pipeline.py`
+src/rag_pipeline.py
 
 Coordina:
 
-1. Memoria conversacional.
-2. Reformulación de la consulta.
-3. Recuperación de documentos.
-4. Construcción del contexto.
-5. Generación mediante Gemma 3 4B.
-6. Post-procesamiento de la respuesta.
-7. Registro de fuentes y nivel de confianza.
+Memoria conversacional.
+Reformulación de la consulta.
+Recuperación de documentos.
+Construcción del contexto.
+Generación mediante Gemma 3 4B.
+Post-procesamiento de la respuesta.
+Registro de fuentes y nivel de confianza.
+Evaluación
 
-### Evaluación
-
-`src/evaluacion.py`
+src/evaluacion.py
 
 Permite medir por separado la calidad de la recuperación y la calidad de las respuestas generadas.
 
----
-
-## 13. Flujo de una consulta
+12. Flujo de una consulta
 
 Una consulta del estudiante sigue el siguiente proceso:
 
-```text
 Pregunta del estudiante
           │
           ▼
@@ -492,67 +359,49 @@ Post-procesamiento
           │
           ▼
 Respuesta + fuentes + confianza
-```
 
-Este flujo permite separar claramente la **recuperación de información** de la
-**generación de lenguaje**, reduciendo el riesgo de que el modelo responda sin
-respaldo documental.
+Este flujo permite separar claramente la recuperación de información de la generación de lenguaje, reduciendo el riesgo de que el modelo responda sin respaldo documental.
 
----
-
-## 14. Ventajas de la solución
+13. Ventajas de la solución
 
 La arquitectura propuesta permite:
 
-- Ejecutar el sistema de forma local.
-- No depender de una API externa de pago para la generación ni los embeddings.
-- Mantener control sobre los documentos utilizados como fuente.
-- Incorporar trazabilidad mediante las fuentes recuperadas.
-- Mantener contexto conversacional.
-- Separar recuperación y generación.
-- Utilizar modelos diferentes para generación y embeddings.
-- Evaluar el comportamiento del sistema mediante un conjunto de pruebas.
-- Mantener una arquitectura modular que permite reemplazar componentes en el futuro.
-
----
-
-## 15. Limitaciones conocidas
-
-- El sistema **no reemplaza la atención de un funcionario o ejecutivo**.
-- No resuelve casos particulares que requieran interpretación administrativa o jurídica.
-- La calidad de las respuestas depende directamente de la calidad y vigencia de los documentos almacenados en `data/`.
-- Un documento desactualizado puede producir una respuesta correcta respecto al corpus, pero incorrecta respecto a la normativa vigente.
-- El modelo se ejecuta localmente, por lo que el tiempo de respuesta depende del hardware disponible.
-- Las métricas de generación basadas en evaluación automática pueden presentar variabilidad y deben interpretarse como indicadores de calidad, no como una medición absoluta.
-
----
-
-## 16. Seguridad y configuración
+Ejecutar el sistema de forma local.
+No depender de una API externa de pago para la generación ni los embeddings.
+Mantener control sobre los documentos utilizados como fuente.
+Incorporar trazabilidad mediante las fuentes recuperadas.
+Mantener contexto conversacional.
+Separar recuperación y generación.
+Utilizar modelos diferentes para generación y embeddings.
+Evaluar el comportamiento del sistema mediante un conjunto de pruebas.
+Mantener una arquitectura modular que permite reemplazar componentes en el futuro.
+14. Limitaciones conocidas
+El sistema no reemplaza la atención de un funcionario o ejecutivo.
+No resuelve casos particulares que requieran interpretación administrativa o jurídica.
+La calidad de las respuestas depende directamente de la calidad y vigencia de los documentos almacenados en data/.
+Un documento desactualizado puede producir una respuesta correcta respecto al corpus, pero incorrecta respecto a la normativa vigente.
+El modelo se ejecuta localmente, por lo que el tiempo de respuesta depende del hardware disponible.
+Las métricas de generación basadas en evaluación automática pueden presentar variabilidad y deben interpretarse como indicadores de calidad, no como una medición absoluta.
+15. Seguridad y configuración
 
 El sistema utiliza modelos locales mediante Ollama y no requiere claves de API externas.
 
 La comunicación con Ollama se realiza mediante el servidor local:
 
-```text
 http://localhost:11434
-```
 
 Los modelos utilizados son:
 
-```text
 Generación:
 Gemma 3 4B
 
 Embeddings:
 nomic-embed-text
-```
 
-El archivo `.env` contiene únicamente parámetros de configuración local y debe mantenerse fuera del repositorio.
+El archivo .env contiene únicamente parámetros de configuración local y debe mantenerse fuera del repositorio.
 
----
+16. Autores
 
-## 17. Autores
+Proyecto desarrollado por Cristian Pizarro, Marco Avello y Benjamin Fredes para la Evaluación Parcial 1 de:
 
-Proyecto desarrollado en modalidad de trabajo en parejas para la Evaluación Parcial 1 de:
-
-**ISY0101 — Ingeniería de Soluciones con IA**
+ISY0101 — Ingeniería de Soluciones con IA
