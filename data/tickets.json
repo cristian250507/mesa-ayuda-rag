@@ -1,0 +1,10 @@
+[
+  {
+    "id_ticket": "TCK-1793909473",
+    "fecha": "2026-11-05 17:11:13",
+    "rut_estudiante": "21902119-4",
+    "motivo": "apelar causal de eliminación por repruebo de Cñculo",
+    "detalle": "Reprobar por segunda vez consecutiva la asignatura de Cñculo",
+    "estado": "PENDIENTE_EJECUTIVO"
+  }
+]

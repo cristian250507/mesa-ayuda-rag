@@ -1,0 +1,7 @@
+{
+  "maxIterations": 100,
+  "requestTimeoutSeconds": 300,
+  "maxSubagentsPerSession": 10,
+  "logLevel": "info",
+  "selectedRepositoryPath": "."
+}
